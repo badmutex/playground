@@ -2,7 +2,7 @@
 # available from http://www.cse.nd.edu/~ccl/software/manuals/makeflow.html
 
 CURL=/usr/bin/curl
-CONVERT=/usr/bin/convert
+CONVERT=$MYSTUFF/imagemagick/`arch`/current/bin/convert
 URL=http://www.cse.nd.edu/~ccl/images/chalkboard.jpeg
 
 capitol.montage.gif: capitol.jpg capitol.90.jpg capitol.180.jpg capitol.270.jpg capitol.360.jpg
