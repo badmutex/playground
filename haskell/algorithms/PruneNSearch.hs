@@ -26,9 +26,11 @@ searchPoints ps = let median = medianPoint ps
                   in undefined
 
 
--- | pairwise associations
-assocs :: [a] -> [(a,a)]
-assocs xs = zip xs (tail xs ++ [head xs])
+-- | pairwise associations. works for lists with an even number of elements
+pairs :: [a] -> [(a,a)]
+pairs xs = let pivot = length xs `div` 2
+               choose f = f pivot xs
+           in zip (choose take) (choose drop)
 
 runAlg :: State [Point] ()
 runAlg = do
