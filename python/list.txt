@@ -1,0 +1,17 @@
+
+>>> from list import *
+>>> l = cons(4,cons(3,cons(2,cons(1,None))))
+>>> l
+cons(4, cons(3, cons(2, cons(1, None))))
+>>> reverse(l)
+cons(1, cons(2, cons(3, cons(4, None))))
+>>> Map( lambda x: x*x, l)
+cons(16, cons(9, cons(4, cons(1, None))))
+>>> append(0, l)
+cons(4, cons(3, cons(2, cons(1, cons(0, None)))))
+>>> zip(reverse(l), l)
+cons((1, 4), cons((2, 3), cons((3, 2), cons((4, 1), None))))
+>>> eq(l,l)
+True
+>>> eq(l,append(0,l))
+False
