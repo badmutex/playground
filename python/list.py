@@ -33,22 +33,37 @@ def reverse(xs):
     else:           return append(xs.head, reverse(xs.tail))
 
 def zipWith(f, xs,ys):
+    """
+    (a -> b -> c) -> [a] -> [b] -> [c]
+    """
     if xs and ys: return cons(f(xs.head, ys.head), zip(xs.tail,ys.tail))
     else: return None
 
 def zip(xs, ys):
+    """
+    [a] -> [b] -> [(a,b)]
+    """
     return zipWith(lambda x,y: (x,y), xs, ys)
 
 def length(xs):
+    """
+    [a] -> Int
+    """
     if not xs: return 0
     else: return 1 + length(xs.tail)
 
 def all(xs):
+    """
+    [Boolean] -> Boolean
+    """
     if xs: return xs.head and all(xs.tail)
     else: return True
 
 
 def eq(xs,ys):
+    """
+    [a] -> [b] -> Boolean
+    """
     if length(xs) == length(ys):
         truths = zipWith(lambda x,y: x == y, xs, ys)
         return all(truths)
