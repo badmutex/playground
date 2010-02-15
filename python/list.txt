@@ -15,3 +15,5 @@ cons((1, 4), cons((2, 3), cons((3, 2), cons((4, 1), None))))
 True
 >>> eq(l,append(0,l))
 False
+>>> eq(l,reverse(reverse(l)))
+True
