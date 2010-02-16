@@ -55,21 +55,26 @@ sortedMedians :: Ord a => V.Vector a -> V.Vector a
 sortedMedians = V.map sortedMedian . groups
 
 
-pivot v = trace (printf "[pivot] v = %s" (show v)) $ sortedMedian . sortedMedians $ v
+pivot v = let p' = sortedMedian . sortedMedians $ v
+          in trace (printf "[pivot] v %s p' %s" (show v) (show p')) p'
 
 
 mpos v = V.length v `div` 2
 
 
-median' vs@(lt,eq,gt) p k
-    | V.length lt >= k = let p' = trace (printf "[m'1] lt = %s k = %d" (show lt) k) $ pivot lt in median' (partition lt p') p' k
-    | V.length lt + V.length eq >= k = trace (printf "[m'2] done: %d" p) p
-    | otherwise = let k' = k - V.length lt - V.length eq in median' (partition gt p) p (trace (printf "[m'3] k' %d" k') k')
+kth vs@(lt,eq,gt) p k
+    | V.length lt >= k = let p' = trace (printf "[kth] lt = %s k = %d" (show lt) k) $ pivot lt
+                         in kth (partition lt p') p' k
+    | V.length lt + V.length eq >= k = trace (printf "[kth] done: %d" p) p
+    | otherwise = let p' = pivot gt
+                      k' = k - V.length lt - V.length gt
+                  in trace (printf "[kth] p' %s k' %d" (show p') k')
+                           kth (partition gt p') p' k'
 
 median v = let p = pivot v
                k = V.length v `div` 2
-           in median' (partition v p) p k
+           in kth (partition v p) p k
 
 
 v :: V.Vector Int
-v = V.fromList [0..19]
+v = V.fromList [1..25]
