@@ -1,67 +1,75 @@
 -- | linear-time algorithm to find the median.
 --
 -- uses prune and search paradigm.
--- see http://www.cs.duke.edu/courses/fall05/cps230/L-03.pdf for details
+-- see
+-- http://www.cs.duke.edu/courses/fall05/cps230/L-03.pdf and
+-- http://par.cse.nsysu.edu.tw/~cbyang/course/algo/algonote/algo6.ppt for details
 --
 -- 1. partition n items in ceiling(n/5) groups of size at most 5 each
 -- 2. find the median in each group
 -- 3. find the median of the medians recursively
 -- 5. split the array using the median of the medians as the pivot
 -- 6. recurse on the pivot
+--
+-- 
 
 module Median where
 
 import Debug.Trace
 import Text.Printf
 
-import qualified Data.Vector.Unboxed as V
+import qualified Data.Vector as V
 import Control.Applicative
 import Control.Monad
 import Control.Monad.State
+import Data.List (sort)
 
 
 
-partition :: V.Unbox a => V.Vector a -> [V.Vector a]
-partition v = let spans     = [0,5..V.length v - 1]
-                  catch i j = if i + j >= V.length v - 1
-                              then (i, V.length v - i)
-                              else (i, j)
-                  slicer i  = uncurry V.slice (catch i 5) v
-              in map slicer spans
+groups :: Ord a => V.Vector a -> V.Vector (V.Vector a)
+groups v = let spans     = V.fromList [0,5..V.length v - 1]
+               catch i j = if i + j >= V.length v - 1
+                           then (i, V.length v - i)
+                           else (i, j)
+               slicer i  = uncurry V.slice (catch i 5) v
+           in V.map slicer spans
+
+-- partition :: Ord a => V.Vector a -> a -> (V.Vector a, V.Vector a, V.Vector a)
+partition v p = let (lt, gte) = V.partition (< p) v
+                    (eq, gt ) = V.partition (==p) gte
+                in trace (printf "[partition] v %s p %s" (show v) (show p)) $ (lt, eq, gt)
 
 
+msort :: Ord a => V.Vector a -> V.Vector a
+msort = V.fromList . sort . V.toList
 
-type ArrayState a = State (V.Vector a)
+groupMedian :: Ord a => V.Vector a -> a
+groupMedian v = let s = msort v
+                in s V.! ((V.length v - 1) `div` 2)
 
-swap :: V.Unbox a => Int -> Int -> ArrayState a ()
-swap i j = do
-  v <- get
-  let iv = v V.! i
-      jv = v V.! j
-      v' = v V.// [(i,jv), (j,iv)]
-  put v'
-
-
-while g m = do
-  p <- g
-  if p
-    then do m
-            while g m
-    else return ()
+sortedMedian :: Ord a => V.Vector a -> a
+sortedMedian v = (V.! (V.length v `div` 2)) $ msort v
 
 
+sortedMedians :: Ord a => V.Vector a -> V.Vector a
+sortedMedians = V.map sortedMedian . groups
 
 
+pivot v = trace (printf "[pivot] v = %s" (show v)) $ sortedMedian . sortedMedians $ v
 
 
+mpos v = V.length v `div` 2
 
-tw :: State Int ()
-tw = do while
-             ( (<5) <$> get )
-             ( (+1) <$> get >>= put )
+
+median' vs@(lt,eq,gt) p k
+    | V.length lt >= k = let p' = trace (printf "[m'1] lt = %s k = %d" (show lt) k) $ pivot lt in median' (partition lt p') p' k
+    | V.length lt + V.length eq >= k = trace (printf "[m'2] done: %d" p) p
+    | otherwise = let k' = k - V.length lt - V.length eq in median' (partition gt p) p (trace (printf "[m'3] k' %d" k') k')
+
+median v = let p = pivot v
+               k = V.length v `div` 2
+           in median' (partition v p) p k
 
 
 v :: V.Vector Int
-v = V.fromList $ reverse [0..19]
-
-t = mapM_ print $ partition v
+v = V.fromList [0..19]
