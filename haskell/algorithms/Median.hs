@@ -44,6 +44,17 @@ partition v p = let (lt, gte) = V.partition (< p) v
 msort :: Ord a => V.Vector a -> V.Vector a
 msort = V.fromList . sort . V.toList
 
+insert a v
+    | V.null v = V.singleton a
+    | otherwise = if a <= h
+                  then V.cons a v
+                  else V.cons h $ insert a (V.tail v)
+                      where h = V.head v
+
+isort v
+      | V.null v = V.empty
+      | otherwise = let (h,t) = (V.head v, V.tail v)
+                    in insert h (isort t)
 
 groupMedian :: Ord a => V.Vector a -> a
 groupMedian v = let s = msort v
