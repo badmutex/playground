@@ -37,11 +37,13 @@ groups v = let spans     = V.fromList [0,5..V.length v - 1]
 -- partition :: Ord a => V.Vector a -> a -> (V.Vector a, V.Vector a, V.Vector a)
 partition v p = let (lt, gte) = V.partition (< p) v
                     (eq, gt ) = V.partition (==p) gte
-                in trace (printf "[partition] v %s p %s" (show v) (show p)) $ (lt, eq, gt)
+                in trace (printf "[partition] v %s p %s" (show v) (show p))
+                         (lt, eq, gt)
 
 
 msort :: Ord a => V.Vector a -> V.Vector a
 msort = V.fromList . sort . V.toList
+
 
 groupMedian :: Ord a => V.Vector a -> a
 groupMedian v = let s = msort v
@@ -56,20 +58,23 @@ sortedMedians = V.map sortedMedian . groups
 
 
 pivot v = let p' = sortedMedian . sortedMedians $ v
-          in trace (printf "[pivot] v %s p' %s" (show v) (show p')) p'
+          in trace (printf "[pivot] v %s p' %s" (show v) (show p'))
+                   p'
 
 
 mpos v = V.length v `div` 2
 
 
 kth vs@(lt,eq,gt) p k
-    | V.length lt >= k = let p' = trace (printf "[kth] lt = %s k = %d" (show lt) k) $ pivot lt
-                         in kth (partition lt p') p' k
-    | V.length lt + V.length eq >= k = trace (printf "[kth] done: %d" p) p
-    | otherwise = let p' = pivot gt
-                      k' = k - V.length lt - V.length gt
-                  in trace (printf "[kth] p' %s k' %d" (show p') k')
-                           kth (partition gt p') p' k'
+    | V.length lt >= k                = let p' = trace (printf "[kth] lt = %s k = %d" (show lt) k)
+                                                       pivot lt
+                                        in kth (partition lt p') p' k
+    | V.length lt + V.length eq >= k  = trace (printf "[kth] done: %d" p)
+                                             p
+    | otherwise                       = let p' = pivot gt
+                                            k' = k - V.length lt - V.length gt
+                                        in trace (printf "[kth] p' %s k' %d" (show p') k')
+                                                 kth (partition gt p') p' k'
 
 median v = let p = pivot v
                k = V.length v `div` 2
@@ -77,4 +82,4 @@ median v = let p = pivot v
 
 
 v :: V.Vector Int
-v = V.fromList [1..25]
+v = V.fromList . reverse $ [1..10]
