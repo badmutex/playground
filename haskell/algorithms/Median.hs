@@ -35,13 +35,63 @@ insertBy f a v
                      then V.cons h $ insertBy f a (V.tail v)
                      else V.cons a v
 
+isort :: Ord a => V.Vector a -> V.Vector a
 isort v
       | V.null v  = V.empty
       | otherwise = let (h,t) = (V.head v, V.tail v)
                     in insertBy (<=) h (isort t)
 
+sortedMedian :: Ord a => V.Vector a -> a
+sortedMedian v = s V.! m
+    where s = isort v
+          m = V.length v `div` 2
 
+
+safeSlice :: Int -> Int -> V.Vector a -> V.Vector a
+safeSlice i j v = uncurry V.slice range v
+    where range = if i + j >= V.length v
+                  then (i, V.length v - i)
+                  else (i, j)
+
+binsOf5 :: V.Vector a -> V.Vector (V.Vector a)
+binsOf5 v = let spans = V.fromList [0,5..V.length v - 1]
+                slicer i = safeSlice i 5 v
+            in V.map slicer spans
+
+pivot :: Ord a => V.Vector a -> a
+pivot v = let medians = V.map isort . binsOf5 $ v
+          in  sortedMedian $ V.map sortedMedian medians
+
+partitionAround :: Ord a => a -> V.Vector a -> [V.Vector a]
+partitionAround p v = let (le, gte) = V.unstablePartition (< p) v
+                          (eq, gt ) = V.unstablePartition (==p) gte
+                      in [le, eq, gt]
+
+data Location = LeftSide | Pivot | RightSide deriving Show
+
+decide :: Int -> [Int] -> Location
+decide k s@[s1, s2, s3]
+    | s1 >= k       = LeftSide
+    | s1 + s3 == k  = Pivot
+    | otherwise     = RightSide
+
+
+kthSmallest :: Ord a => Int -> V.Vector a -> a
+kthSmallest k v
+    | V.null v = error "no solution"
+    | otherwise =
+        let p = pivot v
+            subsets@[lt, eq, gt] = partitionAround p v
+            sizes@[s1, s2, s3]   = map V.length subsets
+        in case decide k sizes of
+             Pivot     -> p
+             LeftSide  -> kthSmallest k lt
+             RightSide -> let k' = let tot   = sum sizes
+                                       rsize = tot - (s1 + s2)
+                                       ksize = tot - k
+                                   in rsize - ksize
+                          in kthSmallest k' gt
 
 
 v :: V.Vector Int
-v = V.fromList . reverse $ [1..10]
+v = V.fromList . reverse $ [1..20]
