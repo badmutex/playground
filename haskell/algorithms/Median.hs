@@ -41,11 +41,6 @@ partition v p = let (lt, gte) = V.partition (< p) v
                 in trace (printf "[partition] v %s p %s" (show v) (show p))
                          (lt, eq, gt)
 
-
-msort :: Ord a => V.Vector a -> V.Vector a
-msort = V.fromList . sort . V.toList
-
-
 insertBy :: (a -> a -> Bool) -> a -> V.Vector a -> V.Vector a
 insertBy f a v
     | V.null v  = V.singleton a
@@ -60,11 +55,11 @@ isort v
                     in insertBy (<=) h (isort t)
 
 groupMedian :: Ord a => V.Vector a -> a
-groupMedian v = let s = msort v
+groupMedian v = let s = isort v
                 in s V.! ((V.length v - 1) `div` 2)
 
 sortedMedian :: Ord a => V.Vector a -> a
-sortedMedian v = (V.! (V.length v `div` 2)) $ msort v
+sortedMedian v = (V.! (V.length v `div` 2)) $ isort v
 
 
 sortedMedians :: Ord a => V.Vector a -> V.Vector a
