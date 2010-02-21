@@ -32,8 +32,8 @@ insertBy f a v
     | V.null v  = V.singleton a
     | otherwise = let h = V.head v
                   in if f a h
-                     then V.cons h $ insertBy f a (V.tail v)
-                     else V.cons a v
+                     then V.cons a v
+                     else V.cons h $ insertBy f a (V.tail v)
 
 isort :: Ord a => V.Vector a -> V.Vector a
 isort v
