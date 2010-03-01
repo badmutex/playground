@@ -7,13 +7,18 @@ typedef struct Node {
   struct Node *next;
 } Node;
 
+typedef struct List {
+  Node* root;
+  int length;
+} List;
+
 typedef struct DNode {
   int val;
   struct DNode *prev;
   struct DNode *next;
 } DNode;
 
-Node* genlist(int length, int (*f)(int)){
+List* genlist(int length, int (*f)(int)){
   Node *root = malloc(sizeof(Node));
   Node *c = root;
   for(int i = 0; i < length; i++){
@@ -23,7 +28,10 @@ Node* genlist(int length, int (*f)(int)){
 	c = c->next;
 	c->next = root->next;
   }
-  return root;
+  List *l = malloc(sizeof(List));
+  l->root = root;
+  l->length = length;
+  return l;
 }
 
 int valgen(int i){
@@ -31,17 +39,22 @@ int valgen(int i){
 }
 
 
+
+
+/* gendlist(int length, int max){ */
+/*   srand(42); */
+/*   DNode *root = malloc(sizeof(DNode)); */
+/*   Node *c = root; */
   
 
 int main(int argc, char **argv){
-  int size = 10;
-  Node* l = genlist(size, *valgen);
-  Node* c = l->next;
-  for(int i = 1; i <= 3*size; i++){
+  List* l = genlist(10, *valgen);
+  Node* c = l->root->next;
+  for(int i = 1; i <= 3*l->length; i++){
 	printf("%i ", c->val);
 	c = c->next;
-	if(i % size == 0){ printf("\n"); }
+	if(i % l->length == 0){ printf("\n"); }
   }
-  printf("\n");
+
   return 0;
 }
