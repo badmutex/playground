@@ -18,46 +18,48 @@ range = (0,900)
 
 type MyState = StateT (Point, [LabeledPoint]) IO
 
-data LabeledPoint = Label Int Point deriving (Eq, Show)
+data LabeledPoint = Label Int Int Point deriving (Eq, Show)
 
 die dim = randomRIO (1, dim)
 
 midPoint (x1,y1) (x2,y2) = ( (x1+x2) / 2,
                              (y1+y2) / 2)
 
-choose i xs = find (\(Label j p) -> i == j) xs
+choose i xs = find (\(Label j k p) -> i == j || i == k) xs
+
+data Num a => RealRatio a = !a :/: !a deriving Show
+
+divRate i n = s1 :/: s2 where
+    sinval = sin (2*pi*i/n)
+    s1 = sinval / (1 + sinval)
+    s2 = 1 / (1 + sinval)
 
 
-vertices dim range = do
-  ps <- replicateM dim $ newPoint range
-  return $ zipWith (\i p -> Label i p) [1..] ps
-
-nextPoint :: Int -> (Float, Float) -> MyState Picture
-nextPoint dim range = do
-  (prev, bounds) <- get
-  label <- liftIO $ die dim
-  let Just (Label _ vertex) = choose label bounds
-      next@(x,y) = midPoint prev vertex
-      state = (next, bounds)
-  put state
-  return $ Translate x y (Circle 0.4)
+vertex n i = let v = 2 * pi * i / n
+                 x = cos v
+                 y = sin v
+             in (x, y)
 
 
-loop :: Int -> Int -> Point -> MyState [Picture]
-loop 0 _ _ = return []
-loop n dim range = do
-  p <- nextPoint dim range
-  liftM (p :) (loop (n-1) dim range)
+mthPoint :: Float -> Float -> State Point Point
+mthPoint n i = let s@(s1 :/: s2) = divRate i n
+                   v@(x,y) = vertex n i
+                   compute v p = (v - p) * s2 + p
+               in do
+                 prev@(xp, yp) <- get
+                 let point = (compute x xp, compute y yp)
+                 put point
+                 return $ point -- uncurry Translate point (Circle 0.4)
 
 
-chaos :: Int -> Int -> IO [Picture]
-chaos dim reps = do
-  seed <- newPoint range
-  bounds <- vertices dim range
-  evalStateT (loop reps dim range) (seed, bounds)
+loop :: (Float -> State Point Point) -> Float -> Float -> State Point [Point]
+loop f i max = do if i >= max
+                     then return []
+                     else do p <- f i
+                             liftM (p:) $ loop f (i+1) max
 
-
+chaos n max = evalState (loop (mthPoint n) 0 max) (0,0)
 
 main = do
-  pics <- chaos 3 50000
-  displayInWindow "hello world" size (0,0) white (Color red (Pictures pics))
+  let pics = chaos 3 10000
+  displayInWindow "Chaos Rules!" (1650, 900) (0,0) white (Line pics)
