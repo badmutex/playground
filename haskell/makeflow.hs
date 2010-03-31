@@ -38,10 +38,15 @@ data Redirection where
 
 instance Prepare Redirection String where
     prepare (Redirect Append StdErr file) = printf "1 >> %s" file
+    prepare (Redirect StdErr Append file) = printf "1 >> %s" file
     prepare (Redirect Write StdErr file) = printf "1 > %s" file
+    prepare (Redirect StdErr Write file) = printf "1 > %s" file
     prepare (Redirect Append StdOut file) = printf ">> %s" file
+    prepare (Redirect StdOut Append file) = printf ">> %s" file
     prepare (Redirect Write StdOut file) = printf "> %s" file
-    prepare (Join StdOut file) = printf "> %s 2>&1" file
+    prepare (Redirect StdOut Write file) = printf "> %s" file
+    prepare (Join Write file) = printf "> %s 2>&1" file
+    prepare (Join Append file) = printf ">> %s 2>&1" file
 
 
 data Program where
@@ -72,18 +77,16 @@ instance Monoid Program where
 
 t1 = Executable "ls" []
 t2 = Group []
-t3 = Group [t1,t1]
+t3 = Group [t4,t1,t1]
 t4 = Output t1 (Join Append "output")
 
 
--- touch file = Executable "touch" [file]
-
--- instance Prepare Program [String] where
---     prepare (Output prog out) = [prep_exec prog ++ " " ++ prepare out]
---         where prep_exec (Executable path args) = printf "%s %s" path (intercalate " " args)
-
---     prepare (Group progs) = concatMap prepare progs
-    -- prepare EmptyProgram = []
+instance Prepare Program [String] where
+    prepare (Executable path args) = [printf "%s %s" path (intercalate " " args)]
+    prepare (Output exec redir) = let [prog] = prepare exec
+                                      output = prepare redir
+                                  in [prog ++ " " ++ output]
+    prepare (Group g) = concatMap prepare g
 
 data Cmd = Cmd {
       cmd_results :: [FilePath]
@@ -94,19 +97,17 @@ data Cmd = Cmd {
 class Makeflow a where
     makeflow :: a -> String
 
--- instance Makeflow Cmd where
---     makeflow cmd = printf "%s : %s\n\t%s\n" results depends commands
---         where results  = intercalate " " (cmd_results cmd)
---               depends  = intercalate " " (cmd_depends cmd)
---               commands = intercalate "\n\t" . prepare $ cmd_program cmd
+instance Makeflow Cmd where
+    makeflow cmd = printf "%s : %s\n\t%s\n" results depends commands
+        where results  = intercalate " " (cmd_results cmd)
+              depends  = intercalate " " (cmd_depends cmd)
+              commands = intercalate "\n\t" . prepare $ cmd_program cmd
 
 instance Monoid Cmd where
     mempty = Cmd { cmd_results = [], cmd_depends = [], cmd_program = mempty }
-    mappend c1 c2 = let cmd1 = c1 -- trace (printf "c1: %s" (show c1)) (cmd_program c1)
-                        cmd2 = c2 -- trace (printf "c2: %s" (show c2)) (cmd_program c2)
-                    in Cmd { cmd_results = cmd_results c1 `mappend` cmd_results c2
+    mappend c1 c2 = Cmd { cmd_results = cmd_results c1 `mappend` cmd_results c2
                         , cmd_depends = cmd_depends c1 `mappend` cmd_depends c2
-                        , cmd_program = cmd_program cmd1 `mappend` cmd_program cmd2 }
+                        , cmd_program = cmd_program c1 `mappend` cmd_program c2 }
 
 newtype CmdBuilder a = CmdBuilder {
       runCmdBuilder :: State Cmd a
@@ -162,16 +163,12 @@ test_cmdbuilder = buildCmd builder where
                  depend "a_dependancy"
 
 
--- test_workflowbuilder = buildWorkflow wf where
---     cmd1 = test_cmdbuilder
---     cmd2 = buildCmd builder
---     join = buildCmd cat
---     builder = do result "world"
---                  program prog_echo
---     cat = do result "helloworld.txt"
---              depend "hello"
---              depend "world"
---              program $ Executable "cat" []
---     wf = do add_cmd cmd1
---             add_cmd cmd2
---             add_cmd join
+test_workflowbuilder = buildWorkflow wf where
+    cmd1 = test_cmdbuilder
+    cmd2 = buildCmd builder
+    join = buildCmd cat
+    builder = output prog_echo (Redirect StdOut Write "world")
+    cat = output (Executable "cat" ["/dev/random"]) (Redirect StdOut Write "cat.log")
+    wf = do add_cmd cmd1
+            add_cmd cmd2
+            add_cmd join
