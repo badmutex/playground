@@ -59,5 +59,5 @@ chaos dim reps = do
 
 
 main = do
-  pics <- chaos 4 100000
-  displayInWindow "hello world" size (0,0) white (Color black (Pictures pics))
+  pics <- chaos 3 50000
+  displayInWindow "hello world" size (0,0) white (Color red (Pictures pics))
