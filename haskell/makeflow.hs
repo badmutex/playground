@@ -147,6 +147,9 @@ newtype Weaver a = Weaver {
 buildWorkflow :: Weaver a -> Workflow
 buildWorkflow = flip (execState . runWeaver) []
 
+genWorkflow :: [CmdBuilder a] -> Workflow
+genWorkflow builders = buildWorkflow $ mapM_ (add_cmd . buildCmd) builders
+
 add_cmd :: Cmd -> Weaver ()
 add_cmd cmd = modify (cmd :)
 
@@ -172,3 +175,10 @@ test_workflowbuilder = buildWorkflow wf where
     wf = do add_cmd cmd1
             add_cmd cmd2
             add_cmd join
+
+
+test = writeFile "/tmp/Makeflow" flow
+    where flow = concatMap makeflow workflow
+          cmd1 = output (Executable "ls" ["/tmp"]) (Join Write "ls.log")
+          cmd2 = output (Executable "head" ["/dev/urandom"]) (Join Write "head.log")
+          workflow = genWorkflow [cmd1, cmd2]
