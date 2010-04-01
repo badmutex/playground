@@ -13,6 +13,8 @@ import Data.Graph.Inductive
 import Text.Printf
 import Data.List
 import Data.Monoid
+import System.FilePath
+import Data.Maybe
 
 import Debug.Trace
 
@@ -35,6 +37,13 @@ data Redirection where
     Join :: Redirection -> OutputFile -> Redirection
     Redirect :: Redirection -> Redirection -> OutputFile -> Redirection
     deriving Show
+
+writeStdOut = Redirect Write StdOut
+writeStdErr = Redirect Write StdErr
+appendStdOut = Redirect Append StdOut
+appendStdErr = Redirect Append StdErr
+writeOutErr = Join Write
+appendOutErr = Join Append
 
 instance Prepare Redirection String where
     prepare (Redirect Append StdErr file) = printf "1 >> %s" file
@@ -60,7 +69,7 @@ instance Monoid Program where
 
     mappend (Group g1) (Group g2)                       = Group (g1 ++ g2)
 
-    mappend (Group g) e@(Executable _ _)                = Group (e:g)
+    mappend g@(Group _) e@(Executable _ _)                = mappend e g
     mappend e@(Executable _ _) (Group g)                = Group (e:g)
 
     mappend (Group g) o@(Output _ _)                    = Group (o:g)
@@ -71,7 +80,6 @@ instance Monoid Program where
                         where redir = case redirection of
                                         Redirect _ output file -> Redirect Append output file
                                         Join     _ file        -> Join Append file
-
     mappend p1 p2                                       = Group [p1,p2]
 
 
@@ -156,12 +164,31 @@ add_cmd cmd = modify (cmd :)
 clear :: Weaver ()
 clear = modify (const [])
 
+
+
+data Location = Local | Remote deriving Show
+
+data Abstraction a where
+    Map :: FilePath -> [String] -> [FilePath] -> Maybe FilePath -> Abstraction FilePath
+
+
+
+buildMap :: Abstraction FilePath -> Workflow
+buildMap (Map exe args inputs out) =
+    let chooseout file = fromMaybe (takeFileName file <.> "out") out
+        cmd file = output (Executable exe (args ++ [file]))  (writeStdOut (chooseout file))
+    in genWorkflow $ map cmd inputs
+
+test2 = finish $ concatMap makeflow $ buildMap $ Map "ls" [] ["/tmp", "/usr"] Nothing
+    where finish = putStr -- writeFile "/tmp/makeflow-hs/Makeflow"
+
+
 prog_echo = Executable "/bin/echo" ["hello world"]
 
 test_cmdbuilder = buildCmd builder where
-    builder = do output prog_echo (Join Write "helloworld1.txt")
-                 output prog_echo (Join Append "helloworld2.txt")
-                 output prog_echo (Redirect StdOut Append "helloworld3.txt")
+    builder = do output prog_echo (writeOutErr "helloworld1.txt")
+                 output prog_echo (appendOutErr "helloworld2.txt")
+                 output prog_echo (appendStdOut "helloworld3.txt")
                  runprogram $ Executable "touch /tmp/dont-capture-this" []
                  depend "a_dependancy"
 
@@ -170,8 +197,8 @@ test_workflowbuilder = buildWorkflow wf where
     cmd1 = test_cmdbuilder
     cmd2 = buildCmd builder
     join = buildCmd cat
-    builder = output prog_echo (Redirect StdOut Write "world")
-    cat = output (Executable "cat" ["/dev/random"]) (Redirect StdOut Write "cat.log")
+    builder = output prog_echo (writeStdOut "world")
+    cat = output (Executable "cat" ["/dev/random"]) (writeStdOut "cat.log")
     wf = do add_cmd cmd1
             add_cmd cmd2
             add_cmd join
@@ -179,6 +206,6 @@ test_workflowbuilder = buildWorkflow wf where
 
 test = writeFile "/tmp/Makeflow" flow
     where flow = concatMap makeflow workflow
-          cmd1 = output (Executable "ls" ["/tmp"]) (Join Write "ls.log")
-          cmd2 = output (Executable "head" ["/dev/urandom"]) (Join Write "head.log")
+          cmd1 = output (Executable "ls" ["/tmp"]) (appendOutErr "ls.log")
+          cmd2 = output (Executable "head" ["/dev/urandom"]) (writeOutErr "head.log")
           workflow = genWorkflow [cmd1, cmd2]
