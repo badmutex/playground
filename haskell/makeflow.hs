@@ -69,10 +69,10 @@ instance Monoid Program where
 
     mappend (Group g1) (Group g2)                       = Group (g1 ++ g2)
 
-    mappend g@(Group _) e@(Executable _ _)                = mappend e g
+    mappend g@(Group _) e@(Executable _ _)              = mappend e g
     mappend e@(Executable _ _) (Group g)                = Group (e:g)
 
-    mappend (Group g) o@(Output _ _)                    = Group (o:g)
+    mappend g@(Group _) o@(Output _ _)                  = mappend o g
     mappend o@(Output _ _) (Group g)                    = Group (o:g)
 
     mappend p1@(Executable _ _) p2@(Output _ _)         = mappend p2 p1
@@ -94,7 +94,7 @@ instance Prepare Program [String] where
     prepare (Output exec redir) = let [prog] = prepare exec
                                       output = prepare redir
                                   in [prog ++ " " ++ output]
-    prepare (Group g) = concatMap prepare g
+    prepare (Group g) = concatMap prepare . reverse $ g
 
 data Cmd = Cmd {
       cmd_results :: [FilePath]
@@ -173,13 +173,14 @@ data Abstraction a where
 
 
 
-buildMap :: Abstraction FilePath -> Workflow
+buildMap :: Abstraction FilePath -> [CmdBuilder ()]
 buildMap (Map exe args inputs out) =
     let chooseout file = fromMaybe (takeFileName file <.> "out") out
         cmd file = output (Executable exe (args ++ [file]))  (writeStdOut (chooseout file))
-    in genWorkflow $ map cmd inputs
+    in map cmd inputs
 
-test2 = finish $ concatMap makeflow $ buildMap $ Map "ls" [] ["/tmp", "/usr"] Nothing
+
+test2 = finish $ concatMap makeflow . genWorkflow $ buildMap $ Map "ls" [] ["/tmp", "/usr"] Nothing
     where finish = putStr -- writeFile "/tmp/makeflow-hs/Makeflow"
 
 
