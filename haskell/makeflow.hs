@@ -180,6 +180,12 @@ buildMap (Map exe args inputs out) =
     in map cmd inputs
 
 
+bounce path = do
+  runprogram $ Executable "cd" [path]
+  runprogram $ Executable "../fah6" ["-betateam"]
+  mapM_ result ["FAHLog.txt", "queueinfo.dat"]
+
+
 test2 = finish $ concatMap makeflow . genWorkflow $ buildMap $ Map "ls" [] ["/tmp", "/usr"] Nothing
     where finish = putStr -- writeFile "/tmp/makeflow-hs/Makeflow"
 
