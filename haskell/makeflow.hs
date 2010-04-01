@@ -9,7 +9,6 @@
 import Control.Monad.State
 import Control.Applicative
 -- import Control.Monad.Parallel
-import Data.Graph.Inductive
 import Text.Printf
 import Data.List
 import Data.Monoid
@@ -106,10 +105,10 @@ class Makeflow a where
     makeflow :: a -> String
 
 instance Makeflow Cmd where
-    makeflow cmd = printf "%s : %s\n\t%s\n" results depends commands
+    makeflow cmd = printf "%s : %s\n\t%s;\n" results depends commands
         where results  = intercalate " " (cmd_results cmd)
               depends  = intercalate " " (cmd_depends cmd)
-              commands = intercalate "\n\t" . prepare $ cmd_program cmd
+              commands = intercalate "; " . prepare $ cmd_program cmd
 
 instance Monoid Cmd where
     mempty = Cmd { cmd_results = [], cmd_depends = [], cmd_program = mempty }
@@ -181,9 +180,17 @@ buildMap (Map exe args inputs out) =
 
 
 bounce path = do
-  runprogram $ Executable "cd" [path]
-  runprogram $ Executable "../fah6" ["-betateam"]
-  mapM_ result ["FAHLog.txt", "queueinfo.dat"]
+  runprogram $ Executable "mkdir" ["-v", "-p", path]
+  runprogram $ Executable "cp" ["client.cfg", path]
+  runprogram $ Executable "pushd" [path]
+  runprogram $ Executable "sed" (words "-i 's/username=abdulwahidc/username=nd_sge/' client.cfg")
+  runprogram $ Executable "/dscratch/cabdulwa/fah/exe/fah6" (words "-oneunit -betateam")
+  depend "client.cfg"
+  depend "/dscratch/cabdulwa/fah/exe/fah6"
+  mapM_ (result . (path</>)) ["FAHLog.txt", "queue.dat", "unitinfo.txt", "work"]
+  runprogram $ Executable "popd" []
+
+runfahtest = writeFile "/dscratch/cabdulwa/fah/test/Makeflow" . makeflow . buildCmd $ bounce "test"
 
 
 test2 = finish $ concatMap makeflow . genWorkflow $ buildMap $ Map "ls" [] ["/tmp", "/usr"] Nothing
