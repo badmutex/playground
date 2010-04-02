@@ -2,15 +2,22 @@
 
 NAME=$1
 
-FAHCLIENT='./fah6'
-ARGS='-betateam'
-USERNAME='nd_bot'
+FAHCLIENT='fah6'
+ARGS='-betateam -oneunit'
+USERNAME='nd_test1_bot'
 CFGTEMPLATE='client.cfg.template'
 GENCFG='SetClientConfig.py'
 
+[ ! -d $NAME ] && mkdir -v $NAME
+
 machineid=$(( $RANDOM % 16 + 1))
-python $GENCFG $USERNAME $machineid
+python $GENCFG $CFGTEMPLATE client.cfg $USERNAME $machineid
+mv -v client.cfg $NAME
 
-$FAHCLIENT $ARGS
+pushd $NAME
 
-tar czjf * $NAME.tar.bz2
+../$FAHCLIENT $ARGS
+
+popd
+
+tar czjf $NAME $NAME.tar.bz2
