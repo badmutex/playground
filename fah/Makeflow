@@ -1,0 +1,4 @@
+
+
+test.tar.bz2 : client.cfg.template crc.sh fah6 SetClientConfig.py
+	bash crc.sh test
