@@ -110,6 +110,9 @@ instance Makeflow Cmd where
               depends  = intercalate " " (cmd_depends cmd)
               commands = intercalate "; " . prepare $ cmd_program cmd
 
+instance Makeflow Workflow where
+    makeflow = concatMap makeflow
+
 instance Monoid Cmd where
     mempty = Cmd { cmd_results = [], cmd_depends = [], cmd_program = mempty }
     mappend c1 c2 = Cmd { cmd_results = cmd_results c1 `mappend` cmd_results c2
@@ -179,18 +182,27 @@ buildMap (Map exe args inputs out) =
     in map cmd inputs
 
 
+runshell :: String -> CmdBuilder ()
+runshell command = runprogram $ Executable bin args
+    where (bin:args) = words command
+
 bounce path = do
-  runprogram $ Executable "mkdir" ["-v", "-p", path]
-  runprogram $ Executable "cp" ["client.cfg", path]
-  runprogram $ Executable "pushd" [path]
-  runprogram $ Executable "sed" (words "-i 's/username=abdulwahidc/username=nd_sge/' client.cfg")
-  runprogram $ Executable "/dscratch/cabdulwa/fah/exe/fah6" (words "-oneunit -betateam")
+  runshell $ "mkdir -vp " ++ path
+  runshell $ "client.cfg " ++ path
+  runshell $ "cp fah6 " ++ path
+  runshell $ "pushd " ++ path
+  runshell $ "sed -i 's/username=abdulwahidc/username=nd_bot/' client.cfg"
+  runshell $ "./fah6 -oneunit -betateam"
   depend "client.cfg"
-  depend "/dscratch/cabdulwa/fah/exe/fah6"
+  depend "fah6"
   mapM_ (result . (path</>)) ["FAHLog.txt", "queue.dat", "unitinfo.txt", "work"]
   runprogram $ Executable "popd" []
 
-runfahtest = writeFile "/dscratch/cabdulwa/fah/test/Makeflow" . makeflow . buildCmd $ bounce "test"
+runfahtest = writeFile "/tmp/Makeflow" mf
+    where work = map (bounce . (++) "work-" . show) [1..20]
+          mf   = makeflow $ genWorkflow work
+
+          
 
 
 test2 = finish $ concatMap makeflow . genWorkflow $ buildMap $ Map "ls" [] ["/tmp", "/usr"] Nothing
