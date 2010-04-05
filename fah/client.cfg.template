@@ -1,0 +1,13 @@
+[settings]
+username=abdulwahidc
+team=22443
+passkey=
+asknet=no
+machineid=1
+local=2
+
+[http]
+active=no
+host=localhost
+port=8080
+
