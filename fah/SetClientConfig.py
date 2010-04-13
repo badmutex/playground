@@ -40,13 +40,15 @@ def main(**kwargs):
 
 
 def usage():
-    return '%s <username> <machineid>' % sys.argv[0]
+    return '%s <template> <config> <username> <machineid>' % sys.argv[0]
 
 if __name__ == '__main__':
-    if len(sys.argv[1:]) is not 2:
+    if len(sys.argv[1:]) is not 4:
         print usage()
         sys.exit(1)
     else:
-        user = sys.argv[1]
-        machine = sys.argv[2]
-        main(username = user, machineid = machine)
+        template = sys.argv[1]
+        config = sys.argv[2]
+        user = sys.argv[3]
+        machine = sys.argv[4]
+        main(template = template, username = user, machineid = machine)
