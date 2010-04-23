@@ -3,10 +3,11 @@
   , GeneralizedNewtypeDeriving
   , FlexibleInstances
   , MultiParamTypeClasses
+  , PackageImports
   , TypeSynonymInstances
   #-}
 
-import Control.Monad.State
+import "mtl" Control.Monad.State
 import Control.Applicative
 -- import Control.Monad.Parallel
 import Text.Printf
