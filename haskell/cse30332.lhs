@@ -151,4 +151,17 @@ messy pretty quickly. In large part though, it's a matter of personal preference
 \end{verbatim}
 
 
+
+
+
+
+
+
+
+
+> cond :: Bool -> a -> a -> a
+> cond True t _ = t
+> cond False _ f = f
+
+
 \end{document}
