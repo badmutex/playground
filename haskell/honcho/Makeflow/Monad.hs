@@ -3,7 +3,6 @@
   GADTs,
   GeneralizedNewtypeDeriving,
   MultiParamTypeClasses,
-  NoMonomorphismRestriction,
   PackageImports,
   TemplateHaskell,
   TypeOperators,
@@ -120,8 +119,7 @@ instance Makeflow Cmd where
               depends  = intercalate " " (get cmd_depends cmd)
               commands = intercalate "; " . prepare $ get cmd_program cmd
 
-instance Makeflow Workflow where
-    makeflow = concatMap makeflow
+
 
 instance Monoid Cmd where
     mempty = Cmd { _cmd_results = mempty, _cmd_depends = mempty, _cmd_program = mempty }
@@ -140,25 +138,25 @@ buildCmd = flip (S.execState . runCmdBuilder) mempty
 modify_cmd m f v = S.get >>= S.put . add f (m v) >> S.get
     where add f x a = set f (x `mappend` get f a) a
 
--- result :: FilePath -> CmdBuilder ()
+result :: FilePath -> CmdBuilder Cmd
 result = modify_cmd return cmd_results
 
--- depend :: FilePath -> CmdBuilder ()
+depend :: FilePath -> CmdBuilder Cmd
 depend = modify_cmd return cmd_depends
 
--- runprogram :: Program -> CmdBuilder ()
+runprogram :: Program -> CmdBuilder Cmd
 runprogram = modify_cmd id cmd_program
 
--- output :: Program -> Redirection -> CmdBuilder ()
+output :: Program -> Redirection -> CmdBuilder Cmd
 output prog redir = do runprogram $ Output prog redir
                        result outputfile
     where outputfile = case redir of Join _ file -> file
                                      Redirect _ _ file -> file
 
--- shellCmd :: String -> CmdBuilder ()
+shellCmd :: String -> CmdBuilder Cmd
 shellCmd = runprogram . shell
 
-
+shell :: String -> Program
 shell s = Executable bin args
     where (bin:args) = words s
 
@@ -169,7 +167,7 @@ redirBuilder f prog file = output (shell prog) (f file)
 (>>::)                   = redirBuilder appendStdErr
 (>*)                     = redirBuilder writeOutErr
 (>>*)                    = redirBuilder appendOutErr
-cmd ! _ = shellCmd
+
 
 t1 = do
   "cat foo.txt bar.txt" >>* "out1.txt"
@@ -190,42 +188,3 @@ t3 = t2 ["/tmp/foo.txt","/tmp/bar.txt"]
 t4 = zipWith t3 (map ((++".txt") . show) [1..2]) ["/tmp/hello.txt", "/tmp/world.txt"]
 
 
-cat out cmds = let c = mconcat cmds
-               in do mapM_ depend (get cmd_results c)
-                     printf "cat %s" (intercalate " " (get cmd_results c)) >: out
-
-catResults out wf = map (mkcmd out) $ wf
-mkcmd out builder = do
-  cmd <- builder
-  return $ set cmd_results out $
-           set cmd_depends (get cmd_results cmd) $
-           mempty
-
-
-type Workflow = [Cmd]
-
-data WFState = WFState {
-      _wfoutput :: Integer
-    , _workflow :: Workflow
-    }
-
-newtype WorkflowM a = WorkflowM {
-      runWorkflow :: S.State WFState a
-    } deriving (Monad, S.MonadState WFState)
-
-
-chunk :: (Integral i) => i -> [a] -> [[a]]
-chunk n xs = chunk' i xs
-      where
-        chunk' _ [] = []
-        chunk' n xs = a : chunk' n b where (a,b) = splitAt n xs
-        i = ceiling (fromIntegral (length xs) / fromIntegral n)
-
-
-
-
--- buildWorkflowM :: WorkflowM a -> [Cmd]
-buildWorkflowM = flip (S.execState . runWorkflow) 
-
--- workflow :: [CmdBuilder a] -> Workflow
--- workflow builders = buildWorkflowM $ mapM_ (S.modify . (:) . buildCmd) builders
