@@ -9,6 +9,10 @@
   TypeSynonymInstances
   #-}
   
+
+
+module Makeflow.Monad where
+
 import Data.Record.Label
 import Language.Haskell.TH
 import qualified "mtl" Control.Monad.State as S

@@ -1,6 +1,6 @@
-module Honcho.Makeflow.Workflow where
+module Makeflow.Workflow where
 
-import Honcho.Makeflow.Monad
+import Makeflow.Monad
 
 
 

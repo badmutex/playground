@@ -1,7 +1,11 @@
-module Honcho.Makeflow.Commands
+module Makeflow.Commands where
 
-import Honcho.Makeflow.monad
+import Makeflow.Monad
 
+import Data.Monoid
+import Data.Record.Label
+import Data.List (intercalate)
+import Text.Printf
 
 
 cat out cmds = let c = mconcat cmds
