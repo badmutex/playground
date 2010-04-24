@@ -2,7 +2,6 @@
   TemplateHaskell,
   TypeOperators
   #-}
-  
 
 import Data.Default
 import Data.Record.Label

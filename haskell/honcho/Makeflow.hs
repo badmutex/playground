@@ -3,6 +3,7 @@
   GADTs,
   GeneralizedNewtypeDeriving,
   MultiParamTypeClasses,
+  NoMonomorphismRestriction,
   PackageImports,
   TemplateHaskell,
   TypeOperators,
@@ -19,20 +20,23 @@ import Data.List
 import Data.Monoid
 import System.FilePath
 import Data.Maybe
+import Data.Record.Label
+import Language.Haskell.TH
+import Control.Monad
 
 
-data Rule = Rule {
-      _command      :: String
-    , _arguments    :: [String]
-    , _outputs      :: [String]
-    , _dependencies :: [String]
-    }
+-- data Rule = Rule {
+--       _command      :: String
+--     , _arguments    :: [String]
+--     , _outputs      :: [String]
+--     , _dependencies :: [String]
+--     }
 
-$(mkLabels [''Rule])
-command      :: Rule :-> FilePath
-arguments    :: Rule :-> [String]
-outputs      :: Rule :-> [String]
-dependencies :: Rule :-> [String]
+-- $(mkLabels [''Rule])
+-- command      :: Rule :-> FilePath
+-- arguments    :: Rule :-> [String]
+-- outputs      :: Rule :-> [String]
+-- dependencies :: Rule :-> [String]
 
 
 
@@ -62,6 +66,8 @@ appendStdOut = Redirect Append StdOut
 appendStdErr = Redirect Append StdErr
 writeOutErr = Join Write
 appendOutErr = Join Append
+
+
 
 instance Prepare Redirection String where
     prepare (Redirect Append StdErr file) = printf "1 >> %s" file
@@ -101,12 +107,6 @@ instance Monoid Program where
     mappend p1 p2                                       = Group [p1,p2]
 
 
-t1 = Executable "ls" []
-t2 = Group []
-t3 = Group [t4,t1,t1]
-t4 = Output t1 (Join Append "output")
-
-
 instance Prepare Program [String] where
     prepare (Executable path args) = [printf "%s %s" path (intercalate " " args)]
     prepare (Output exec redir) = let [prog] = prepare exec
@@ -115,28 +115,34 @@ instance Prepare Program [String] where
     prepare (Group g) = concatMap prepare . reverse $ g
 
 data Cmd = Cmd {
-      cmd_results :: [FilePath]
-    , cmd_depends :: [FilePath]
-    , cmd_program :: Program
+      _cmd_results :: [FilePath]
+    , _cmd_depends :: [FilePath]
+    , _cmd_program :: Program
     } deriving Show
+
+$(mkLabels [''Cmd])
+cmd_results :: Cmd :-> [FilePath]
+cmd_depends :: Cmd :-> [FilePath]
+cmd_program :: Cmd :-> Program
+
 
 class Makeflow a where
     makeflow :: a -> String
 
 instance Makeflow Cmd where
     makeflow cmd = printf "%s : %s\n\t%s;\n" results depends commands
-        where results  = intercalate " " (cmd_results cmd)
-              depends  = intercalate " " (cmd_depends cmd)
-              commands = intercalate "; " . prepare $ cmd_program cmd
+        where results  = intercalate " " (get cmd_results cmd)
+              depends  = intercalate " " (get cmd_depends cmd)
+              commands = intercalate "; " . prepare $ get cmd_program cmd
 
 instance Makeflow Workflow where
     makeflow = concatMap makeflow
 
 instance Monoid Cmd where
-    mempty = Cmd { cmd_results = [], cmd_depends = [], cmd_program = mempty }
-    mappend c1 c2 = Cmd { cmd_results = cmd_results c1 `mappend` cmd_results c2
-                        , cmd_depends = cmd_depends c1 `mappend` cmd_depends c2
-                        , cmd_program = cmd_program c1 `mappend` cmd_program c2 }
+    mempty = Cmd { _cmd_results = [], _cmd_depends = [], _cmd_program = mempty }
+    mappend c1 c2 = Cmd { _cmd_results = _cmd_results c1 `mappend` _cmd_results c2
+                        , _cmd_depends = _cmd_depends c1 `mappend` _cmd_depends c2
+                        , _cmd_program = _cmd_program c1 `mappend` _cmd_program c2 }
 
 newtype CmdBuilder a = CmdBuilder {
       runCmdBuilder :: S.State Cmd a
@@ -145,19 +151,18 @@ newtype CmdBuilder a = CmdBuilder {
 buildCmd :: CmdBuilder a -> Cmd
 buildCmd = flip (S.execState . runCmdBuilder) mempty
 
-add_to_cmd :: Cmd -> (Cmd -> Cmd) -> Cmd
-add_to_cmd cmd mod = mappend cmd $ mod mempty
 
-modify_cmd val mod = S.get >>= S.put . flip add_to_cmd mod
+modify_cmd m f v = S.get >>= S.put . add f (m v)
+    where add f x a = set f (x `mappend` get f a) a
 
 result :: FilePath -> CmdBuilder ()
-result path = modify_cmd path (\cmd -> cmd {cmd_results = [path]})
+result = modify_cmd return cmd_results
 
 depend :: FilePath -> CmdBuilder ()
-depend path = modify_cmd path (\cmd -> cmd {cmd_depends = [path]})
+depend = modify_cmd return cmd_depends
 
 runprogram :: Program -> CmdBuilder ()
-runprogram prog = modify_cmd prog (\cmd -> cmd {cmd_program = prog})
+runprogram = modify_cmd id cmd_program
 
 output :: Program -> Redirection -> CmdBuilder ()
 output prog redir = do runprogram $ Output prog redir
@@ -165,26 +170,50 @@ output prog redir = do runprogram $ Output prog redir
     where outputfile = case redir of Join _ file -> file
                                      Redirect _ _ file -> file
 
-runshell :: String -> CmdBuilder ()
-runshell command = runprogram $ Executable bin args
-    where (bin:args) = words command
+shellCmd :: String -> CmdBuilder ()
+shellCmd = runprogram . shell
 
+
+shell s = Executable bin args
+    where (bin:args) = words s
+
+redirBuilder f prog file = output (shell prog) (f file)
+(>:)                     = redirBuilder writeStdOut
+(>::)                    = redirBuilder writeStdErr
+(>>:)                    = redirBuilder appendStdOut
+(>>::)                   = redirBuilder appendStdErr
+(>*)                     = redirBuilder writeOutErr
+(>>*)                    = redirBuilder appendOutErr
+cmd ! _ = shellCmd
+
+t1 = do
+  "cat foo.txt bar.txt" >>* "out.txt"
+  mapM_ depend [ "/tmp/foo.txt"
+               , "/tmp/bar.txt" ]
+
+
+t2 deps fout fin = do
+  printf "cat %s" fin >* fout
+  mapM_ depend deps
+
+t3 = t2 ["/tmp/foo.txt","/tmp/bar.txt"]
+t4 = zipWith t3 (map ((++".txt") . show) [1..2]) ["/tmp/hello.txt", "/tmp/world.txt"]
+
+cat :: OutputFile -> [FilePath] -> CmdBuilder ()
+cat out ins = printf "cat %s" (intercalate " " ins) >: out
 
 
 type Workflow = [Cmd]
 
--- newtype Weaver a = Weaver {
---       runWeaver :: S.State Workflow a
---     } deriving (Monad, S.MonadState Workflow)
+newtype WorkflowM a = WorkflowM {
+      runWorkflow :: S.State [Cmd] a
+    } deriving (Monad, S.MonadState [Cmd])
 
--- buildWorkflow :: Weaver a -> Workflow
--- buildWorkflow = flip (S.execState . runWeaver) []
+buildWorkflowM :: WorkflowM a -> [Cmd]
+buildWorkflowM = flip (S.execState . runWorkflow) []
 
--- genWorkflow :: [CmdBuilder a] -> Workflow
--- genWorkflow builders = buildWorkflow $ mapM_ (add_cmd . buildCmd) builders
+workflow :: [CmdBuilder a] -> Workflow
+workflow builders = buildWorkflowM $ mapM_ (S.modify . (:) . buildCmd) builders
 
--- add_cmd :: Cmd -> Weaver ()
--- add_cmd cmd = S.modify (cmd :)
-
--- clear :: Weaver ()
--- clear = S.modify (const [])
+clearWorkflow :: WorkflowM ()
+clearWorkflow = S.modify (const [])
