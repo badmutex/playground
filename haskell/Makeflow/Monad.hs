@@ -126,7 +126,7 @@ instance Makeflow Cmd where
 
 
 instance Monoid Cmd where
-    mempty = Cmd { _cmd_results = mempty, _cmd_depends = mempty, _cmd_program = mempty }
+    mempty        = Cmd { _cmd_results = mempty, _cmd_depends = mempty, _cmd_program = mempty }
     mappend c1 c2 = Cmd { _cmd_results = _cmd_results c1 `mappend` _cmd_results c2
                         , _cmd_depends = _cmd_depends c1 `mappend` _cmd_depends c2
                         , _cmd_program = _cmd_program c1 `mappend` _cmd_program c2 }
@@ -141,54 +141,4 @@ buildCmd = flip (S.execState . runCmdBuilder) mempty
 
 modify_cmd m f v = S.get >>= S.put . add f (m v) >> S.get
     where add f x a = set f (x `mappend` get f a) a
-
-result :: FilePath -> CmdBuilder Cmd
-result = modify_cmd return cmd_results
-
-depend :: FilePath -> CmdBuilder Cmd
-depend = modify_cmd return cmd_depends
-
-runprogram :: Program -> CmdBuilder Cmd
-runprogram = modify_cmd id cmd_program
-
-output :: Program -> Redirection -> CmdBuilder Cmd
-output prog redir = do runprogram $ Output prog redir
-                       result outputfile
-    where outputfile = case redir of Join _ file -> file
-                                     Redirect _ _ file -> file
-
-shellCmd :: String -> CmdBuilder Cmd
-shellCmd = runprogram . shell
-
-shell :: String -> Program
-shell s = Executable bin args
-    where (bin:args) = words s
-
-redirBuilder f prog file = output (shell prog) (f file)
-(>:)                     = redirBuilder writeStdOut
-(>::)                    = redirBuilder writeStdErr
-(>>:)                    = redirBuilder appendStdOut
-(>>::)                   = redirBuilder appendStdErr
-(>*)                     = redirBuilder writeOutErr
-(>>*)                    = redirBuilder appendOutErr
-
-
-t1 = do
-  "cat foo.txt bar.txt" >>* "out1.txt"
-  mapM_ depend [ "/tmp/foo.txt"
-               , "/tmp/bar.txt" ]
-
-t1' = do
-  "cat baz.txt bang.txt" >>* "out2.txt"
-  mapM_ depend [ "/tmp/foo.txt"
-               , "/tmp/bar.txt" ]
-
-
-t2 deps fout fin = do
-  printf "cat %s" fin >* fout
-  mapM_ depend deps
-
-t3 = t2 ["/tmp/foo.txt","/tmp/bar.txt"]
-t4 = zipWith t3 (map ((++".txt") . show) [1..2]) ["/tmp/hello.txt", "/tmp/world.txt"]
-
 
