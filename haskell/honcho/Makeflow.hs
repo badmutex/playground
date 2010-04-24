@@ -14,7 +14,6 @@ import Data.Record.Label
 import Language.Haskell.TH
 import qualified "mtl" Control.Monad.State as S
 import Control.Applicative
--- import Control.Monad.Parallel
 import Text.Printf
 import Data.List
 import Data.Monoid
@@ -23,20 +22,6 @@ import Data.Maybe
 import Data.Record.Label
 import Language.Haskell.TH
 import Control.Monad
-
-
--- data Rule = Rule {
---       _command      :: String
---     , _arguments    :: [String]
---     , _outputs      :: [String]
---     , _dependencies :: [String]
---     }
-
--- $(mkLabels [''Rule])
--- command      :: Rule :-> FilePath
--- arguments    :: Rule :-> [String]
--- outputs      :: Rule :-> [String]
--- dependencies :: Rule :-> [String]
 
 
 
@@ -52,19 +37,19 @@ type OutputFile = FilePath
 
 
 data Redirection where
-    StdErr :: Redirection
-    StdOut :: Redirection
-    Append :: Redirection
-    Write :: Redirection
-    Join :: Redirection -> OutputFile -> Redirection
+    StdErr   :: Redirection
+    StdOut   :: Redirection
+    Append   :: Redirection
+    Write    :: Redirection
+    Join     :: Redirection -> OutputFile -> Redirection
     Redirect :: Redirection -> Redirection -> OutputFile -> Redirection
     deriving Show
 
-writeStdOut = Redirect Write StdOut
-writeStdErr = Redirect Write StdErr
+writeStdOut  = Redirect Write StdOut
+writeStdErr  = Redirect Write StdErr
 appendStdOut = Redirect Append StdOut
 appendStdErr = Redirect Append StdErr
-writeOutErr = Join Write
+writeOutErr  = Join Write
 appendOutErr = Join Append
 
 
@@ -72,20 +57,20 @@ appendOutErr = Join Append
 instance Prepare Redirection String where
     prepare (Redirect Append StdErr file) = printf "1 >> %s" file
     prepare (Redirect StdErr Append file) = printf "1 >> %s" file
-    prepare (Redirect Write StdErr file) = printf "1 > %s" file
-    prepare (Redirect StdErr Write file) = printf "1 > %s" file
+    prepare (Redirect Write StdErr file)  = printf "1 > %s" file
+    prepare (Redirect StdErr Write file)  = printf "1 > %s" file
     prepare (Redirect Append StdOut file) = printf ">> %s" file
     prepare (Redirect StdOut Append file) = printf ">> %s" file
-    prepare (Redirect Write StdOut file) = printf "> %s" file
-    prepare (Redirect StdOut Write file) = printf "> %s" file
-    prepare (Join Write file) = printf "> %s 2>&1" file
-    prepare (Join Append file) = printf ">> %s 2>&1" file
+    prepare (Redirect Write StdOut file)  = printf "> %s" file
+    prepare (Redirect StdOut Write file)  = printf "> %s" file
+    prepare (Join Write file)             = printf "> %s 2>&1" file
+    prepare (Join Append file)            = printf ">> %s 2>&1" file
 
 
 data Program where
-    Executable   :: FilePath  -> [Argument] -> Program
-    Output       :: Program -> Redirection -> Program
-    Group :: [Program] -> Program
+    Executable :: FilePath  -> [Argument]  -> Program
+    Output     :: Program   -> Redirection -> Program
+    Group      :: [Program] -> Program
     deriving Show
 
 instance Monoid Program where
@@ -152,25 +137,25 @@ buildCmd :: CmdBuilder a -> Cmd
 buildCmd = flip (S.execState . runCmdBuilder) mempty
 
 
-modify_cmd m f v = S.get >>= S.put . add f (m v)
+modify_cmd m f v = S.get >>= S.put . add f (m v) >> S.get
     where add f x a = set f (x `mappend` get f a) a
 
-result :: FilePath -> CmdBuilder ()
+-- result :: FilePath -> CmdBuilder ()
 result = modify_cmd return cmd_results
 
-depend :: FilePath -> CmdBuilder ()
+-- depend :: FilePath -> CmdBuilder ()
 depend = modify_cmd return cmd_depends
 
-runprogram :: Program -> CmdBuilder ()
+-- runprogram :: Program -> CmdBuilder ()
 runprogram = modify_cmd id cmd_program
 
-output :: Program -> Redirection -> CmdBuilder ()
+-- output :: Program -> Redirection -> CmdBuilder ()
 output prog redir = do runprogram $ Output prog redir
                        result outputfile
     where outputfile = case redir of Join _ file -> file
                                      Redirect _ _ file -> file
 
-shellCmd :: String -> CmdBuilder ()
+-- shellCmd :: String -> CmdBuilder ()
 shellCmd = runprogram . shell
 
 
@@ -199,21 +184,32 @@ t2 deps fout fin = do
 t3 = t2 ["/tmp/foo.txt","/tmp/bar.txt"]
 t4 = zipWith t3 (map ((++".txt") . show) [1..2]) ["/tmp/hello.txt", "/tmp/world.txt"]
 
-cat :: OutputFile -> [FilePath] -> CmdBuilder ()
+-- cat :: OutputFile -> [FilePath] -> CmdBuilder ()
 cat out ins = printf "cat %s" (intercalate " " ins) >: out
+
+catResults out wf = map (mkcmd out) $ wf
+mkcmd out builder = do
+  cmd <- builder
+  return $ set cmd_results out $
+           set cmd_depends (get cmd_results cmd) $
+           mempty
 
 
 type Workflow = [Cmd]
 
+data WFState = WFState {
+      _wfoutput :: Integer
+    , _workflow :: Workflow
+    }
+
 newtype WorkflowM a = WorkflowM {
-      runWorkflow :: S.State [Cmd] a
-    } deriving (Monad, S.MonadState [Cmd])
+      runWorkflow :: S.State WFState a
+    } deriving (Monad, S.MonadState WFState)
 
-buildWorkflowM :: WorkflowM a -> [Cmd]
-buildWorkflowM = flip (S.execState . runWorkflow) []
 
-workflow :: [CmdBuilder a] -> Workflow
-workflow builders = buildWorkflowM $ mapM_ (S.modify . (:) . buildCmd) builders
 
-clearWorkflow :: WorkflowM ()
-clearWorkflow = S.modify (const [])
+-- buildWorkflowM :: WorkflowM a -> [Cmd]
+buildWorkflowM = flip (S.execState . runWorkflow) 
+
+-- workflow :: [CmdBuilder a] -> Workflow
+-- workflow builders = buildWorkflowM $ mapM_ (S.modify . (:) . buildCmd) builders
