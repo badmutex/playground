@@ -6,6 +6,7 @@
   PackageImports,
   TemplateHaskell,
   TypeOperators,
+  NoMonomorphismRestriction,
   TypeSynonymInstances
   #-}
   
@@ -123,6 +124,8 @@ instance Makeflow Cmd where
               depends  = intercalate " " (get cmd_depends cmd)
               commands = intercalate "; " . prepare $ get cmd_program cmd
 
+instance Makeflow [Cmd] where
+    makeflow = concatMap makeflow
 
 
 instance Monoid Cmd where
@@ -135,8 +138,22 @@ newtype CmdBuilder a = CmdBuilder {
       runCmdBuilder :: S.State Cmd a
     } deriving (Monad, S.MonadState Cmd)
 
+returnCmd c = CmdBuilder (return c)
+
+h = Cmd {_cmd_results = ["hello.out"], _cmd_depends = [], _cmd_program = Group [Output (Executable "echo" ["hello"]) (Redirect Write StdOut "hello.out")]}
+
+wrapCmdBuilderState f = flip (f . runCmdBuilder) mempty
+
 buildCmd :: CmdBuilder a -> Cmd
-buildCmd = flip (S.execState . runCmdBuilder) mempty
+buildCmd = wrapCmdBuilderState S.execState
+
+runCmdBuilderState :: CmdBuilder a -> (a, Cmd)
+runCmdBuilderState = wrapCmdBuilderState S.runState
+
+
+
+joinCmds cs = let cs' = map buildCmd cs
+              in (: cs') . mconcat $ cs'
 
 
 modify_cmd m f v = S.get >>= S.put . add f (m v) >> S.get

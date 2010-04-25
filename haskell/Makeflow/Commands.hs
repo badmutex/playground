@@ -71,22 +71,22 @@ chunk n xs = chunk' i xs
 
 
 
-t1 = do
-  "cat foo.txt bar.txt" >>* "out1.txt"
-  mapM_ depend [ "/tmp/foo.txt"
-               , "/tmp/bar.txt" ]
+-- t1 = do
+--   "cat foo.txt bar.txt" >>* "out1.txt"
+--   mapM_ depend [ "/tmp/foo.txt"
+--                , "/tmp/bar.txt" ]
 
-t1' = do
-  "cat baz.txt bang.txt" >>* "out2.txt"
-  mapM_ depend [ "/tmp/foo.txt"
-               , "/tmp/bar.txt" ]
+-- t1' = do
+--   "cat baz.txt bang.txt" >>* "out2.txt"
+--   mapM_ depend [ "/tmp/foo.txt"
+--                , "/tmp/bar.txt" ]
 
 
-t2 deps fout fin = do
-  printf "cat %s" fin >* fout
-  mapM_ depend deps
+-- t2 deps fout fin = do
+--   printf "cat %s" fin >* fout
+--   mapM_ depend deps
 
-t3 = t2 ["/tmp/foo.txt","/tmp/bar.txt"]
-t4 = zipWith t3 (map ((++".txt") . show) [1..2]) ["/tmp/hello.txt", "/tmp/world.txt"]
+-- t3 = t2 ["/tmp/foo.txt","/tmp/bar.txt"]
+-- t4 = zipWith t3 (map ((++".txt") . show) [1..2]) ["/tmp/hello.txt", "/tmp/world.txt"]
 
 
