@@ -16,6 +16,7 @@ module Makeflow.Monad where
 
 import Data.Record.Label
 import Language.Haskell.TH
+import "mtl" Control.Monad.Identity
 import qualified "mtl" Control.Monad.State as S
 import Control.Applicative
 import Text.Printf
@@ -26,6 +27,7 @@ import Data.Maybe
 import Data.Record.Label
 import Language.Haskell.TH
 import Control.Monad
+
 
 
 
@@ -138,18 +140,13 @@ newtype CmdBuilder a = CmdBuilder {
       runCmdBuilder :: S.State Cmd a
     } deriving (Monad, S.MonadState Cmd)
 
-returnCmd c = CmdBuilder (return c)
-
-h = Cmd {_cmd_results = ["hello.out"], _cmd_depends = [], _cmd_program = Group [Output (Executable "echo" ["hello"]) (Redirect Write StdOut "hello.out")]}
-
-wrapCmdBuilderState f = flip (f . runCmdBuilder) mempty
+wrapCmdBuilderState statef = flip (statef . runCmdBuilder) mempty
 
 buildCmd :: CmdBuilder a -> Cmd
 buildCmd = wrapCmdBuilderState S.execState
 
 runCmdBuilderState :: CmdBuilder a -> (a, Cmd)
 runCmdBuilderState = wrapCmdBuilderState S.runState
-
 
 
 joinCmds cs = let cs' = map buildCmd cs
