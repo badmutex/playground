@@ -56,10 +56,10 @@ redirBuilder f prog file = output (shell prog) (f file)
 
 
 -- | Cot the outputs of these commands into a file
-cat :: OutputFile -> [Cmd] -> CmdBuilder Cmd
-cat out cmds = let c = mconcat cmds
-               in do depends (get cmd_results c)
-                     printf "cat %s" (intercalate " " (get cmd_results c)) >: out
+-- cat :: OutputFile -> [Cmd] -> CmdBuilder Cmd
+-- cat out cmds = let c = mconcat cmds
+--                in do depends (get cmd_results c)
+--                      printf "cat %s" (intercalate " " (get cmd_results c)) >: out
 
 
 chunk :: (Integral i) => i -> [a] -> [[a]]

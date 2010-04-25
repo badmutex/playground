@@ -14,6 +14,8 @@
 
 module Makeflow.Monad where
 
+import Makeflow.Util
+
 import Data.Record.Label
 import Language.Haskell.TH
 import "mtl" Control.Monad.Identity
@@ -126,9 +128,6 @@ instance Makeflow Cmd where
               depends  = intercalate " " (get cmd_depends cmd)
               commands = intercalate "; " . prepare $ get cmd_program cmd
 
-instance Makeflow [Cmd] where
-    makeflow = concatMap makeflow
-
 
 instance Monoid Cmd where
     mempty        = Cmd { _cmd_results = mempty, _cmd_depends = mempty, _cmd_program = mempty }
@@ -140,7 +139,7 @@ newtype CmdBuilder a = CmdBuilder {
       runCmdBuilder :: S.State Cmd a
     } deriving (Monad, S.MonadState Cmd)
 
-wrapCmdBuilderState statef = flip (statef . runCmdBuilder) mempty
+wrapCmdBuilderState statef = wrappedStateMonad runCmdBuilder statef
 
 buildCmd :: CmdBuilder a -> Cmd
 buildCmd = wrapCmdBuilderState S.execState
