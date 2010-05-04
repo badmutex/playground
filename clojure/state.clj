@@ -1,14 +1,19 @@
 
-(defn return [v]
-  (fn [s] [s v]))
 
-(defn run [m s0]
-  (m s0))
+
+(defn return [a]
+	 (fn [s] [s a]))
+
 
 (defn bind [m f]
-  (fn [s0]
-	(let [[s2 v] (run m s0)]
-	  [s2 (f v)])))
+  (fn [s] (let [[s2 v] (m s)]
+			(f v) s2)))
 
+(defn gets []
+  (fn [s] [s s]))
 
-(defn id [x] x)
+(defn puts [s]
+  (fn [_] [s nil]))
+
+(defn mods [f]
+  (fn [s] [(f s) nil]))
