@@ -25,6 +25,7 @@ insert v (Node a l r) = if v < a
 
 fromList = foldr insert Leaf
 
+
 vs = [10,5,20,15,1,8,2,7,5]
 t = fromList vs
 t2 = fromList . map (*2) $ vs
