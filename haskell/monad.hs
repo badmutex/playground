@@ -63,3 +63,23 @@ prop_test s = let t = (==) (s+1) . flip execState s
                   xs = map t [inc, inc']
               in and xs
 
+
+
+
+
+newtype MaybeT m a = MaybeT { runMaybeT :: m (Maybe a) }
+
+instance Monad Maybe where
+    return = Just
+    (Just a) >>= f = f a
+    Nothing  >>= _ = Nothing
+
+instance Monad m => Monad (MaybeT m) where
+    return = MaybeT . return . Just
+    (>>=)  = maybeTbind
+
+maybeTbind m f = MaybeT $ runMaybeT m >>= \b ->
+                 case b of Nothing -> return Nothing
+                           Just v  -> runMaybeT $ f v
+
+
