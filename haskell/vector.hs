@@ -3,17 +3,25 @@
   EmptyDataDecls,
   FlexibleContexts,
   FlexibleInstances,
-  MultiParamTypeClasses,
-  TypeFamilies,
-  TypeSynonymInstances,
-  UndecidableInstances
+  MultiParamTypeClasses
   #-}
+
+module Math.Vector ( Z, S, D0, D1, D2, D3
+                   , previous
+                   , Count (..)
+                   , Tagged (..)
+                   , tag
+                   , Vec
+                   , Vectorize (..)
+
+                   , module V
+                   )
+    where
 
 import Data.Vector as V
 import Data.Foldable as F
 import Data.Traversable as T
 
-data U
 data Z
 data S a
 
@@ -69,13 +77,3 @@ vecOp op a b = let (x,y) = (untag a, untag b)
 scalarMul :: (Count t, Num n) => n -> Tagged t (Vector n) -> Tagged t (Vector n)
 scalarMul a v = vecOp (*) (Tag $ V.replicate dim a) v
     where dim = fromIntegral . count $ tag v
-
-
-v1 :: Tagged D3 (Vector Double)
-v1 = Tag $ V.fromList [1..3]
-
-v2 :: Tagged D2 (Vector Integer)
-v2 = Tag $ V.fromList [4..5]
-
-t :: Tagged D3 (Vector Double)
-t = v1 <+> v1
