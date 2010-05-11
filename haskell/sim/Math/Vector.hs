@@ -12,7 +12,9 @@ module Math.Vector ( Z, S, D0, D1, D2, D3
                    , Tagged (..)
                    , tag
                    , Vec
+                   , BaseVector (..)
                    , Vectorize (..)
+                   , vector, vector'
                    )
     where
 
@@ -85,16 +87,21 @@ instance BaseVector V.Vector where
 
 
 class Vectorize d v a where
-    (<+>) :: Num a => Vec d v a -> Vec d v a -> Vec d v a
-    {-# INLINE (<+>) #-}
-    (<->) :: Num a => Vec d v a -> Vec d v a -> Vec d v a
-    {-# INLINE (<->) #-}
-    (*>)  :: Num a =>         a -> Vec d v a -> Vec d v a
-    {-# INLINE (*>) #-}
-    (<*)  :: Num a => Vec d v a ->         a -> Vec d v a
-    {-# INLINE (<*) #-}
+    (<+>) :: Num a        => Vec d v a -> Vec d v a -> Vec d v a
+    (<->) :: Num a        => Vec d v a -> Vec d v a -> Vec d v a
+    (*>)  :: Num a        =>         a -> Vec d v a -> Vec d v a
+    (<*)  :: Num a        => Vec d v a ->         a -> Vec d v a
+    (</)  :: Fractional a => Vec d v a ->         a -> Vec d v a
+    norm  :: Floating a   => Vec d v a ->         a
+
     (<*)   = flip (*>)
-    norm  :: Floating a => Vec d v a -> a
+    v </ s = v <* (1/s)
+
+    {-# INLINE (<+>) #-}
+    {-# INLINE (<->) #-}
+    {-# INLINE (*>) #-}
+    {-# INLINE (<*) #-}
+    {-# INLINE (</) #-}
     {-# INLINE norm #-}
 
 
