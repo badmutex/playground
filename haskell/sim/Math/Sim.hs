@@ -2,9 +2,9 @@ module Math.Sim where
 
 import Prelude as P
 
-import Math.Vector
+import Math.Vector as V
 
-import Data.Vector as V
+import Data.Vector (Vector)
 
 
 type Position = Vec D3 Vector Double
@@ -26,11 +26,10 @@ data SimState = S { particles :: Particles }
 
 
 
-force_between :: Particle -> Particle -> Force
-force_between p1 p2 = let top = (mass p1 * mass p2) *> (pos p1 <-> pos p2)
-                          bot = norm (pos p1 <-> pos p2) ^3
-                      in top </ bot
+forceOn :: Particle -> Particle -> Force
+forceOn p1 p2 = (mass p1 * mass p2) *> (pos p1 <-> pos p2) </ (norm (pos p1 <-> pos p2) ^3)
 
 
-p1 = P (vector' [1..3]) (vector' [0,0,0]) 9
-p2 = P (vector' [4..6]) (vector' [0,0,0]) 9
+
+p1 = P (vector [0,0,0]) (vector [0,0,0]) 9
+p2 = P (vector [1,1,1]) (vector [0,0,0]) 9

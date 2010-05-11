@@ -12,9 +12,10 @@ module Math.Vector ( Z, S, D0, D1, D2, D3
                    , Tagged (..)
                    , tag
                    , Vec
+                   , FromList (..)
                    , BaseVector (..)
                    , Vectorize (..)
-                   , vector, vector'
+                   , vector, safeVector, unsafeVector
                    )
     where
 
@@ -61,8 +62,14 @@ instance Foldable V.Vector where foldr = V.foldr
 newtype Vec d v a = MkVec { unvec :: Tagged d (v a) }
     deriving Show
 
+instance Functor v => Functor (Vec d v) where
+    fmap f = wrap . fmap f . unwrap
+
 unwrap :: Vec d v a -> v a
 unwrap = untag . unvec
+
+wrap :: v a -> Vec d v a
+wrap = MkVec . Tag
 
 class FromList v where
     fromList :: [a] -> v a
@@ -84,6 +91,8 @@ class Functor v => BaseVector v where
 instance BaseVector V.Vector where
     length = V.length
 
+instance BaseVector v => BaseVector (Vec d v) where
+    length = length . unwrap
 
 
 class Vectorize d v a where
@@ -150,27 +159,31 @@ instance Count d => Vectorize d [] a where
 
 
 
-vector :: (Count d, FromList v, BaseVector v) =>
+unsafeVector :: FromList v => [a] -> Vec d v a
+unsafeVector = wrap . fromList
+
+check :: (BaseVector v, Count d) => Vec d v a -> Either (Int, Int) (Vec d v a)
+check v = let l = length (unwrap v)
+              d = typeDim v
+          in if length (unwrap v) == typeDim v
+             then Right v
+             else Left (l,d)
+
+safeVector :: (Count d, FromList v, BaseVector v) =>
           [a] -> Either (Int, Int) (Vec d v a)
-vector xs = let vec = MkVec . Tag $ fromList xs
-                check :: (BaseVector v, Count d) => Vec d v a -> Either (Int, Int) (Vec d v a)
-                check v = let l = length (unwrap v)
-                              d = typeDim v
-                          in if length (unwrap v) == typeDim v
-                             then Right v
-                             else Left (l,d)
-            in check vec
+safeVector = check . unsafeVector 
+{-# INLINE safeVector #-}
+
+-- | Calls 'safeVector' then 'error' if length and dimension do not match.
+vector :: (Count d, FromList v, BaseVector v) => [a] -> Vec d v a
+vector xs = case safeVector xs of
+              Right v -> v
+              Left (l,d) -> error $ printf "Type dimensional mismatch: length = %d, typed as %d" l d
 {-# INLINE vector #-}
 
-vector' :: (Count d, FromList v, BaseVector v) => [a] -> Vec d v a
-vector' xs = case vector xs of
-               Right v -> v
-               Left (l,d) -> error $ printf "Type dimensional mismatch: length = %d, typed as %d" l d
-{-# INLINE vector' #-}
 
 
 
 
-
-v :: Vec D3 V.Vector Int
-v = vector'  [1..3]
+-- v :: Vec D3 V.Vector Int
+-- v = vector'  [1..3]

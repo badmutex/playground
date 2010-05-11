@@ -50,7 +50,7 @@ Library
   Exposed-modules:     Math.Sim, Math.Vector
   
   -- Packages needed in order to build this package.
-  -- Build-depends:       
+  Build-depends:       base, vector
   
   -- Modules not exported by this package.
   -- Other-modules:       
