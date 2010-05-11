@@ -3,7 +3,7 @@
 import Data.Vector as V
 import Prelude as P
 
-import Vectorize
+import Math.Vector
 
 type Position = Tagged D3 (Vector Double)
 type Velocity = Tagged D3 (Vector Double)
