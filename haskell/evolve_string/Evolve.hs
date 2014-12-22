@@ -75,11 +75,15 @@ runGA gens target pop = go 0 pop
 
 
 data Parameters = Parms { popSize :: Int
-                        , maxGens :: Int }
+                        , maxGens :: Int
+                        , seed    :: Int }
 
 defParms = Parms { popSize = 50
-                 , maxGens = 9000 } 
+                 , maxGens = 9000
+                 , seed    = 0 }
 
 run :: String -> IO Solution
 run target = let prms = defParms
-             in initialize (popSize prms) (length target) >>= runGA (maxGens prms) (Solution target)
+             in do
+               setStdGen $ mkStdGen (seed prms)
+               initialize (popSize prms) (length target) >>= runGA (maxGens prms) (Solution target)
