@@ -10,5 +10,6 @@ pkgs.myEnvFun {
     random
     editDistance
     randomFu
+    mwcRandom
   ];
 }

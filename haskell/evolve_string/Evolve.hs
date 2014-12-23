@@ -8,7 +8,9 @@ import Control.Applicative
 import Text.EditDistance
 import Data.Random
 import Data.Random.Lift
+import qualified Data.Random.Source.MWC as MWC
 import System.Random
+import qualified Data.Vector as V
 
 
 
@@ -90,7 +92,7 @@ defParms = Parms { popSize = 200
 run :: String -> IO Solution
 run target = let prms = defParms
              in do
-               stdgen <- newIORef $ mkStdGen $ seed prms
-               flip runRVarT stdgen $ do
+               rng <- MWC.initialize $ V.singleton $ fromIntegral $ seed prms
+               flip runRVarT rng $ do
                   initialize (popSize prms) (length target)
                   >>= runGA (maxGens prms) (Solution target)
