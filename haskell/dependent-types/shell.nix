@@ -7,7 +7,7 @@ let
 
   inherit (nixpkgs) pkgs;
 
-  ghc = pkgs.haskell.packages.${compiler}.ghcWithPackages (ps: with ps; [
+  ghc = pkgs.haskell.packages.${compiler}.ghcWithHoogle (ps: with ps; [
     reflection
     singletons
   ]);
