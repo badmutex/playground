@@ -1,7 +1,7 @@
 module App exposing (..)
 
-import Html exposing (Html, div, text, form, input, textarea, button, select, option)
-import Html.Attributes exposing (value, defaultValue, title, size, cols, rows, type')
+import Html exposing (Html, div, text, form, input, textarea, button, select, option, iframe, a)
+import Html.Attributes exposing (value, defaultValue, title, size, cols, rows, type', width, height, src)
 import Html.App
 
 -- MODEL
@@ -33,10 +33,11 @@ view model =
             div []
                 [ text "Inputs"
                 , form [title "title"] []
-                , textarea [cols 30, rows 30, defaultValue "text"] []
-                , button [value "value"] []
+                , textarea [cols 30, rows 10, defaultValue "text"] []
+                , button [value "value"] [text "click me!"]
                 , select [] []
-                , option [] []
+                , option [] [text "option a"]
+                , iframe [ width 560, height 315, src "https://www.youtube.com/embed/Fg4koastMuM" ] []
                 ]
 
 
