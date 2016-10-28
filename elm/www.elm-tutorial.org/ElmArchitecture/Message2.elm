@@ -11,11 +11,13 @@ init = (0, Cmd.none)
 
 type Msg
     = Incr Int
+    | Decr Int
 
 view : Model -> Html Msg
 view model =
     div []
-        [ button [ onClick (Incr 1) ] [ text "+" ]
+        [ button [ onClick (Incr 1) ] [ text "+ 1" ]
+        , button [ onClick (Decr 1) ] [ text "- 1" ] 
         , text (toString model)
         ]
 
@@ -24,6 +26,8 @@ update msg model =
     case msg of
         Incr n ->
             (model + n, Cmd.none)
+        Decr n ->
+            ( model - n, Cmd.none)
 
 
 subscriptions : Model -> Sub Msg
