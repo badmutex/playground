@@ -1,0 +1,9 @@
+<html>
+	<head><title>Pred COUPLE 2.00 Results Page</title>
+<LINK REL=stylesheet HREF="pred.css" TYPE="text/css">
+</head>
+<body>
+Query sequence: <b>sp|P28223|5HT2A_HUMAN</b>
+<HR align=left size=2 width=100%><i>G-protein coupling specificity - Normalised score
+<hr align=left size=2 width=100%>
+<i>Gq/11 - </i>	<strong><font color=green>0.99</font></strong><BR><HR align=left size=1 width=100%><BR><i>Gi/o - </i>	<strong><font color=red>0.15</font></strong><BR><i>G12/13 - </i>	<strong><font color=red>0.00</font></strong><BR><i>Gs - </i>	<strong><font color=red>0.00</font></strong><BR><HR align=left color=grey size=5 width=100%><BR><BR><BR><a target =_blank href=/bioinformatics/PRED-COUPLE2/help.htm>help page</a>
