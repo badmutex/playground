@@ -1,6 +1,7 @@
 module Main exposing (..)
 
 import Html exposing (Html)
+import Html.Attributes exposing (title, name)
 import Html.App
 import Widget
 
@@ -22,7 +23,7 @@ type Msg
 
 view : AppModel -> Html Msg
 view model =
-    Html.div []
+    Html.div [title "Compose outer Div"]
         [ Html.App.map WidgetMsg (Widget.view model.widgetModel)
         ]
 
