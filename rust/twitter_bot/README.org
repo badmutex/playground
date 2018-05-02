@@ -1,0 +1,6 @@
+
+* Steps
+
+  1. create app
+  2. setenv API key and API secret
+  3. add DM permissions access if desired
