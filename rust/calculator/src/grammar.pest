@@ -1,0 +1,30 @@
+WHITESPACE = _{ " " | "\t" | "\n" | "\r" }
+
+alpha = { 'a'..'z' | 'A'..'Z' }
+digit = { '0'..'9' }
+int = @{ digit+ }
+float = @{ digit+ ~ "." ~ digit+ }
+num = _{ float | int }
+
+lparen = { "(" }
+rparen = { ")" }
+
+term = { num | lparen ~ expr ~ rparen }
+pow = { "^" }
+mul = { "*" }
+div = { "/" }
+add = { "+" }
+sub = { "-" }
+
+
+expr =
+{ factor ~ add ~ expr
+| factor ~ sub ~ expr
+| factor
+}
+
+factor =
+{ term ~ mul ~ factor
+| term ~ div ~ factor
+| term
+}
